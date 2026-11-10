@@ -4,6 +4,7 @@ const DRAWER_STYLES = ":host {\n  all: initial;\n  color-scheme: light;\n  font-
 if (!document.getElementById('chrome-note-drawer')) {
   const PREFIX = 'snippet:';
   const POSITION = 'drawer.position';
+  const AUTO_CLOSE_DELAY = 100;
   const host = document.createElement('div');
   host.id = 'chrome-note-drawer';
   // Inline !important protects the outer shell from broad styles on host pages.
@@ -71,7 +72,7 @@ if (!document.getElementById('chrome-note-drawer')) {
         </div>
       </form>
       <div class="status" role="status" aria-live="polite"></div>
-      <footer class="footer"><span class="privacy">${icon('lock')} 仅存于此浏览器</span><span>移开 1 秒，自动收起</span></footer>
+      <footer class="footer"><span class="privacy">${icon('lock')} 仅存于此浏览器</span><span class="close-hint">移开 100ms，自动收起</span></footer>
     </section>`;
 
   const $ = (selector) => root.querySelector(selector);
@@ -115,9 +116,16 @@ if (!document.getElementById('chrome-note-drawer')) {
     if (!value && panel.contains(root.activeElement)) handle.focus({ preventScroll: true });
   }
 
+  function canAutoClose() {
+    return opened && !drag && form.hidden && !root.activeElement?.matches('input, textarea');
+  }
+
   function scheduleClose() {
     clearTimeout(closeTimer);
-    if (opened && !drag) closeTimer = setTimeout(() => setOpen(false), 1000);
+    if (canAutoClose()) closeTimer = setTimeout(() => {
+      // Re-check: editing may have started since the pointer left the drawer.
+      if (canAutoClose()) setOpen(false);
+    }, AUTO_CLOSE_DELAY);
   }
 
   function status(message, error = false) {
@@ -246,6 +254,7 @@ if (!document.getElementById('chrome-note-drawer')) {
 
   function edit(snippet = null) {
     if (!loaded) return status('尚未读到本地数据，请刷新网页后重试。', true);
+    clearTimeout(closeTimer);
     editingId = snippet?.id ?? crypto.randomUUID();
     editingCreatedAt = snippet?.createdAt ?? Date.now();
     form.reset();
@@ -256,6 +265,7 @@ if (!document.getElementById('chrome-note-drawer')) {
     $('.delete-confirm').hidden = true;
     $('.list-view').hidden = true;
     form.hidden = false;
+    $('.close-hint').textContent = '编辑中，保持展开';
     $('.status').textContent = '';
     titleInput.focus({ preventScroll: true });
   }
@@ -265,8 +275,10 @@ if (!document.getElementById('chrome-note-drawer')) {
     $('.list-view').hidden = false;
     editingId = null;
     $('.delete-confirm').hidden = true;
+    $('.close-hint').textContent = '移开 100ms，自动收起';
     renderList();
     $('.add').focus({ preventScroll: true });
+    if (!host.matches(':hover')) scheduleClose();
   }
 
   async function save(event) {

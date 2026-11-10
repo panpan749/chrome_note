@@ -1,6 +1,6 @@
 {
   "name": "chrome-note",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "随手记：悬停即开的常用文本抽屉",
   "scripts": {

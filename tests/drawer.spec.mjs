@@ -48,6 +48,14 @@ test.afterEach(async () => {
 });
 
 async function open() {
+  if (await ui('.handle').getAttribute('aria-expanded') === 'false') {
+    await page.mouse.move(400, 100);
+    // aria-hidden changes immediately; wait for an earlier collapse to settle
+    // before targeting the handle at its final, right-edge position.
+    await page.locator('#chrome-note-drawer').evaluate(async (el) => {
+      await Promise.all(el.getAnimations().map((animation) => animation.finished.catch(() => {})));
+    });
+  }
   await ui('.handle').hover();
   await expect(ui('.handle')).toHaveAttribute('aria-expanded', 'true');
   await expect(ui('.panel')).toHaveAttribute('aria-hidden', 'false');
@@ -63,20 +71,36 @@ async function add(title, text) {
   await expect(ui('.card-title').filter({ hasText: title })).toBeVisible();
 }
 
-test('hover opens, pointer leave waits 1s, re-entry cancels, Escape and keyboard work', async () => {
+test('hover opens, pointer leave waits 100ms, re-entry cancels, Escape and keyboard work', async () => {
   await expect(ui('.panel')).toHaveAttribute('aria-hidden', 'true');
   const box = await ui('.handle').boundingBox();
   expect(Math.round(box.x + box.width)).toBe(1280);
   expect(await page.evaluate(() => document.elementFromPoint(1270, 200)?.id)).not.toBe('chrome-note-drawer');
   await open();
   await page.mouse.move(400, 100);
-  await page.waitForTimeout(550);
+  await page.waitForTimeout(30);
+  await page.mouse.move(1260, 180);
+  await page.waitForTimeout(180);
   await expect(ui('.handle')).toHaveAttribute('aria-expanded', 'true');
-  await ui('.handle').hover();
-  await page.waitForTimeout(650);
-  await expect(ui('.handle')).toHaveAttribute('aria-expanded', 'true');
+  await page.evaluate(() => {
+    const host = document.getElementById('chrome-note-drawer');
+    const handle = host.shadowRoot.querySelector('.handle');
+    host.addEventListener('pointerleave', () => {
+      const start = performance.now();
+      const observer = new MutationObserver(() => {
+        if (handle.getAttribute('aria-expanded') === 'false') {
+          window.collapseDelay = performance.now() - start;
+          observer.disconnect();
+        }
+      });
+      observer.observe(handle, { attributes: true, attributeFilter: ['aria-expanded'] });
+    }, { once: true });
+  });
   await page.mouse.move(400, 100);
-  await expect(ui('.handle')).toHaveAttribute('aria-expanded', 'false', { timeout: 1600 });
+  await expect(ui('.handle')).toHaveAttribute('aria-expanded', 'false', { timeout: 700 });
+  const delay = await page.evaluate(() => window.collapseDelay);
+  expect(delay).toBeGreaterThanOrEqual(85);
+  expect(delay).toBeLessThan(500);
   await ui('.handle').focus();
   await page.keyboard.press('Enter');
   await expect(ui('.search input')).toBeFocused();
@@ -153,7 +177,8 @@ test('long list scrolls, validates whitespace, preserves an unfinished draft on 
   await expect(ui('.status')).toContainText('不能只有空格');
   await ui('input[name="title"]').fill('未完成的草稿');
   await page.mouse.move(200, 200);
-  await expect(ui('.panel')).toHaveAttribute('aria-hidden', 'true', { timeout: 1700 });
+  await ui('.collapse').click();
+  await expect(ui('.panel')).toHaveAttribute('aria-hidden', 'true');
   await open();
   await expect(ui('input[name="title"]')).toHaveValue('未完成的草稿');
   await ui('button.cancel').last().click();
@@ -165,6 +190,47 @@ test('long list scrolls, validates whitespace, preserves an unfinished draft on 
   expect(scroll.total).toBeGreaterThan(scroll.height);
   expect(scroll.top).toBeGreaterThan(0);
   await expect(ui('.count')).toHaveText('09');
+});
+
+test('new and existing notes stay open while typing with the mouse outside; browsing closes after saving', async () => {
+  await open();
+  await ui('.add').click();
+  await page.mouse.move(200, 200);
+  await page.waitForTimeout(1200);
+  await expect(ui('.panel')).toHaveAttribute('aria-hidden', 'false');
+  await expect(ui('input[name="title"]')).toBeFocused();
+  await page.keyboard.type('Regression note', { delay: 20 });
+  await page.keyboard.press('Tab');
+  await page.keyboard.type('Typing with the cursor outside', { delay: 20 });
+  await expect(ui('textarea[name="text"]')).toHaveValue('Typing with the cursor outside');
+  await expect(ui('.close-hint')).toHaveText('编辑中，保持展开');
+  // Even losing focus must not hide the editor or discard its draft.
+  await page.getByRole('textbox', { name: '网页输入框' }).click();
+  await page.waitForTimeout(250);
+  await expect(ui('.panel')).toHaveAttribute('aria-hidden', 'false');
+  await ui('textarea[name="text"]').focus();
+  await page.keyboard.press('Control+Enter');
+  await expect(ui('.editor')).toBeHidden();
+  await expect(ui('.panel')).toHaveAttribute('aria-hidden', 'true', { timeout: 700 });
+  await open();
+  await ui('.edit').click();
+  await page.mouse.move(200, 200);
+  await page.waitForTimeout(250);
+  await page.keyboard.press('End');
+  await page.keyboard.type(' updated');
+  await expect(ui('input[name="title"]')).toHaveValue('Regression note updated');
+  await expect(ui('.panel')).toHaveAttribute('aria-hidden', 'false');
+  await ui('button.cancel').last().focus();
+  await page.keyboard.press('Enter');
+  await expect(ui('.panel')).toHaveAttribute('aria-hidden', 'true', { timeout: 700 });
+  await open();
+  await ui('.search input').focus();
+  await page.mouse.move(200, 200);
+  await page.keyboard.type('Regression', { delay: 20 });
+  await page.waitForTimeout(250);
+  await expect(ui('.panel')).toHaveAttribute('aria-hidden', 'false');
+  await page.getByRole('textbox', { name: '网页输入框' }).click();
+  await expect(ui('.panel')).toHaveAttribute('aria-hidden', 'true', { timeout: 700 });
 });
 
 test('light-blue drawer screenshot and style isolation on a host page', async () => {
