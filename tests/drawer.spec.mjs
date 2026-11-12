@@ -71,6 +71,105 @@ async function add(title, text) {
   await expect(ui('.card-title').filter({ hasText: title })).toBeVisible();
 }
 
+async function worker() {
+  return context.serviceWorkers()[0] || await context.waitForEvent('serviceworker');
+}
+
+async function visits() {
+  return (await worker()).evaluate(async () => (await chrome.storage.local.get('visits.entries'))['visits.entries'] || []);
+}
+
+async function openSites() {
+  await open();
+  await ui('[data-view="sites"]').click();
+  await expect(ui('.sites-view')).toBeVisible();
+}
+
+test('records real navigation, deduplicates refresh, tracks SPA routes and concurrent tabs', async () => {
+  await expect.poll(async () => (await visits()).find((site) => site.url === origin + '/')?.count).toBe(1);
+  await page.reload();
+  await expect(ui('.handle')).toBeVisible();
+  expect((await visits()).find((site) => site.url === origin + '/').count).toBe(1);
+  await page.evaluate(() => { history.pushState({}, '', '/inbox?q=one'); document.title = '收件箱'; });
+  await expect.poll(async () => (await visits()).find((site) => site.url.endsWith('/inbox?q=one'))?.title).toBe('收件箱');
+  await page.evaluate(() => { location.hash = 'section'; });
+  await expect.poll(async () => (await visits()).length).toBe(2);
+  await page.evaluate(() => { location.hash = '/settings'; });
+  await expect.poll(async () => (await visits()).some((site) => site.url.endsWith('#/settings'))).toBe(true);
+  const tabs = await Promise.all(Array.from({ length: 4 }, () => context.newPage()));
+  await Promise.all(tabs.map((tab, i) => tab.goto(`${origin}/parallel-${i}`)));
+  await expect.poll(async () => (await visits()).filter((site) => site.url.includes('/parallel-')).length).toBe(4);
+  expect((await visits()).every((site) => site.count === 1)).toBe(true);
+  // Age the persisted timestamp to exercise an actual revisit without a 30s sleep.
+  await (await worker()).evaluate(async (url) => {
+    const data = await chrome.storage.local.get('visits.entries');
+    data['visits.entries'].find((site) => site.url === url).lastVisited -= 31000;
+    await chrome.storage.local.set(data);
+  }, origin + '/parallel-0');
+  await tabs[0].bringToFront();
+  await expect.poll(async () => (await visits()).find((site) => site.url === origin + '/parallel-0')?.count).toBe(2);
+});
+
+test('recent-frequency ranking, search, safe titles, quick opening and remembered view', async () => {
+  const timestamp = Date.now();
+  const week = 7 * 86400000;
+  const recentUrl = origin + '/recent?q=hello#/inbox';
+  await (await worker()).evaluate(async ({ origin, timestamp, week, recentUrl }) => {
+    await chrome.storage.local.set({ 'visits.entries': [
+      { url: origin + '/old', title: '以前最常用', count: 100, score: 100, lastVisited: timestamp - 7 * week },
+      { url: recentUrl, title: '<img src=x onerror=alert(1)> 最近常用', count: 2, score: 2, lastVisited: timestamp },
+    ] });
+  }, { origin, timestamp, week, recentUrl });
+  await openSites();
+  await expect(ui('.site-card .card-title').first()).toHaveText('<img src=x onerror=alert(1)> 最近常用');
+  await expect(ui('.site-card img')).toHaveCount(0);
+  await expect(ui('.site-card')).toHaveCount(2);
+  await ui('.site-search input').fill('/old');
+  await expect(ui('.site-card .card-title')).toHaveText('以前最常用');
+  await ui('.site-search input').fill('不存在');
+  await expect(ui('.site-list .empty h2')).toHaveText('没有找到这个网页');
+  await ui('.site-search input').fill('');
+  const popupPromise = context.waitForEvent('page');
+  await ui('.site-link').first().click();
+  const destination = await popupPromise;
+  await destination.waitForURL(recentUrl);
+  await expect(destination.locator('#chrome-note-drawer .handle')).toBeVisible();
+  await destination.close();
+  await page.bringToFront();
+  await page.reload();
+  await open();
+  await expect(ui('[data-view="sites"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(ui('.site-card .card-title').filter({ hasText: '以前最常用' })).toHaveCount(1);
+  await ui('.site-search input').focus();
+  await page.mouse.move(200, 200);
+  await page.waitForTimeout(200);
+  await expect(ui('.panel')).toHaveAttribute('aria-hidden', 'false');
+});
+
+test('removing and clearing visits syncs tabs and preserves saved notes', async () => {
+  await open();
+  await add('保留的文本', '不会因清空网页记录而丢失');
+  const other = await context.newPage();
+  await other.goto(origin + '/other');
+  await expect.poll(async () => (await visits()).length).toBe(2);
+  await other.locator('#chrome-note-drawer .handle').hover();
+  await other.locator('#chrome-note-drawer [data-view="sites"]').click();
+  await page.bringToFront();
+  await openSites();
+  await ui('.forget-site').first().click();
+  await expect(ui('.site-card')).toHaveCount(1);
+  await expect(other.locator('#chrome-note-drawer .site-card')).toHaveCount(1);
+  await ui('.clear-sites').click();
+  await ui('.keep-sites').click();
+  await expect(ui('.site-card')).toHaveCount(1);
+  await ui('.clear-sites').click();
+  await ui('.confirm-clear-sites').click();
+  await expect(ui('.site-list .empty h2')).toHaveText('常去的地方，会出现在这里');
+  await expect(other.locator('#chrome-note-drawer .site-card')).toHaveCount(0);
+  await ui('[data-view="notes"]').click();
+  await expect(ui('.card-title')).toHaveText('保留的文本');
+});
+
 test('hover opens, pointer leave waits 100ms, re-entry cancels, Escape and keyboard work', async () => {
   await expect(ui('.panel')).toHaveAttribute('aria-hidden', 'true');
   const box = await ui('.handle').boundingBox();
@@ -103,7 +202,7 @@ test('hover opens, pointer leave waits 100ms, re-entry cancels, Escape and keybo
   expect(delay).toBeLessThan(500);
   await ui('.handle').focus();
   await page.keyboard.press('Enter');
-  await expect(ui('.search input')).toBeFocused();
+  await expect(ui('.list-view .search input')).toBeFocused();
   await page.keyboard.press('Escape');
   await expect(ui('.panel')).toHaveAttribute('aria-hidden', 'true');
 });
@@ -127,10 +226,10 @@ test('create, copy exact multiline text, edit, filter, persist, synchronize tabs
   await page.keyboard.press('Control+Enter');
   await expect(ui('.card-title')).toHaveText('更新后的回复');
   await expect(ui('.card-body')).toHaveText('新的内容 <script>alert(1)</script>');
-  await ui('.search input').fill('找不到');
+  await ui('.list-view .search input').fill('找不到');
   await expect(ui('.card')).toHaveCount(0);
   await expect(ui('.empty h2')).toHaveText('没有找到这条文本');
-  await ui('.search input').fill('新的内容');
+  await ui('.list-view .search input').fill('新的内容');
   await expect(ui('.card')).toHaveCount(1);
   const other = await context.newPage();
   await other.goto(origin + '/second');
@@ -224,7 +323,7 @@ test('new and existing notes stay open while typing with the mouse outside; brow
   await page.keyboard.press('Enter');
   await expect(ui('.panel')).toHaveAttribute('aria-hidden', 'true', { timeout: 700 });
   await open();
-  await ui('.search input').focus();
+  await ui('.list-view .search input').focus();
   await page.mouse.move(200, 200);
   await page.keyboard.type('Regression', { delay: 20 });
   await page.waitForTimeout(250);
@@ -250,4 +349,19 @@ test('light-blue drawer screenshot and style isolation on a host page', async ()
   await expect(ui('.panel')).toHaveAttribute('aria-hidden', 'true', { timeout: 1700 });
   await page.waitForTimeout(300);
   await page.screenshot({ path: 'docs/collapsed.png' });
+  await (await worker()).evaluate(async () => {
+    const day = 86400000;
+    const now = Date.now();
+    await chrome.storage.local.set({ 'visits.entries': [
+      { url: 'https://github.com/', title: 'GitHub · 我的工作台', count: 28, score: 15, lastVisited: now },
+      { url: 'https://developer.mozilla.org/zh-CN/', title: 'MDN Web Docs · 开发文档', count: 18, score: 10, lastVisited: now - day },
+      { url: 'https://calendar.google.com/', title: 'Google 日历 · 今天的安排', count: 12, score: 8, lastVisited: now - 2 * day },
+      { url: 'https://www.wikipedia.org/', title: '维基百科 · 自由的百科全书', count: 40, score: 20, lastVisited: now - 21 * day },
+    ] });
+  });
+  await openSites();
+  await expect(ui('.site-card')).toHaveCount(4);
+  await expect(ui('.site-card .card-title').last()).toContainText('维基百科');
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: 'docs/sites.png' });
 });

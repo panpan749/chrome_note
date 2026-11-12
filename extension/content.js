@@ -1,9 +1,10 @@
 (() => {
-const DRAWER_STYLES = ":host {\n  all: initial;\n  color-scheme: light;\n  font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;\n  font-size: 14px;\n  color: #273d52;\n  line-height: 1.5;\n  -webkit-font-smoothing: antialiased;\n}\n*, *::before, *::after { box-sizing: border-box; }\nbutton, input, textarea { font: inherit; color: inherit; }\nbutton { cursor: pointer; }\nbutton, input, textarea { -webkit-tap-highlight-color: transparent; }\nbutton:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px solid #83b7e8; outline-offset: 3px; }\nbutton { border: 0; }\nsvg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }\n[hidden] { display: none !important; }\n.handle {\n  pointer-events: auto;\n  position: absolute; left: 0; width: 32px; height: 64px; padding: 0;\n  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;\n  border: 1px solid #c8def2; border-right: 0; border-radius: 14px 0 0 14px;\n  background: #eaf4ff; color: #5185b3; box-shadow: -3px 3px 14px #365a8012;\n  touch-action: none; user-select: none; cursor: grab;\n  transition: background .18s, color .18s;\n}\n.handle:hover { background: #dceeff; color: #2469a4; }\n.handle:active { cursor: grabbing; }\n.grip { width: 10px; height: 7px; background-image: radial-gradient(circle, #89aaca 1px, transparent 1px); background-size: 5px 4px; }\n.panel {\n  pointer-events: auto;\n  margin-left: 32px; width: calc(100% - 32px); height: 100%;\n  background: #f8fbff; border: 1px solid #dce8f3; border-right: 0;\n  border-radius: 22px 0 0 22px; box-shadow: -12px 8px 48px #294f741a;\n  display: flex; flex-direction: column; overflow: hidden;\n}\n:host([data-open=\"false\"]) .panel { box-shadow: none; }\n.header { padding: 26px 24px 18px; background: linear-gradient(145deg, #eef6ff, #f8fbff 85%); }\n.topline { display: flex; align-items: center; gap: 10px; }\n.brand-icon { width: 36px; height: 36px; border: 1px solid #ccdef1; background: #e1efff; border-radius: 11px; display: grid; place-items: center; color: #4c82b3; }\n.brand-icon svg { width: 20px; height: 20px; }\nh1 { font-size: 19px; font-weight: 650; letter-spacing: 1px; margin: 0; }\n.brand-caption { color: #8b9db0; font-size: 10px; letter-spacing: 2px; line-height: 1.2; margin-top: 2px; }\n.spacer { flex: 1; }\n.icon-button { width: 30px; height: 30px; border-radius: 8px; background: transparent; color: #8198ae; display: inline-flex; align-items: center; justify-content: center; }\n.icon-button:hover { color: #3c78af; background: #e5f0fc; }\n.tagline { margin: 18px 0 0; font-size: 12px; color: #8395a8; letter-spacing: .3px; }\n.toolbar { padding: 0 24px 18px; display: flex; gap: 9px; }\n.search { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; padding: 0 11px; height: 39px; background: white; border: 1px solid #e0e9f3; border-radius: 10px; color: #9aafc2; }\n.search:focus-within { border-color: #94bee5; box-shadow: 0 0 0 3px #d9eafd77; }\n.search svg { width: 16px; height: 16px; }\n.search input { background: transparent; border: 0; outline: none; width: 100%; min-width: 0; font-size: 12px; }\n.search input::placeholder { color: #9aaabb; }\n.primary { background: #5f96c9; color: white; border: 1px solid #548cc0; border-radius: 10px; padding: 9px 14px; font-size: 12px; font-weight: 550; display: inline-flex; justify-content: center; align-items: center; gap: 5px; box-shadow: 0 2px 3px #467bad14; }\n.primary:hover { background: #4b84b8; }\n.primary:disabled { cursor: wait; opacity: .6; }\n.primary svg { width: 15px; height: 15px; }\n.list-view { flex: 1; min-height: 0; display: flex; flex-direction: column; }\n.list-heading { display: flex; justify-content: space-between; padding: 0 25px 10px; color: #8b9caf; font-size: 10px; letter-spacing: 1px; }\n.list-heading span:last-child { letter-spacing: 0; }\n.list { flex: 1; min-height: 0; overflow-y: auto; padding: 2px 17px 18px 24px; scrollbar-width: thin; scrollbar-color: #caddec transparent; overscroll-behavior: contain; }\n.card { position: relative; margin-bottom: 10px; border: 1px solid #e1eaf4; border-radius: 12px; background: #fff; transition: border-color .16s, box-shadow .16s, transform .16s; }\n.card:hover, .card:focus-within { border-color: #9ec4e6; box-shadow: 0 4px 13px #457eb40c; transform: translateY(-1px); }\n.copy-card { background: transparent; display: block; width: 100%; text-align: left; border-radius: 12px; padding: 17px 41px 16px 16px; }\n.card-title { display: block; font-size: 13px; font-weight: 600; color: #3c5269; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n.card-body { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; color: #8696a7; line-height: 1.85; margin-top: 7px; }\n.card:hover .card-title { color: #3979b3; }\n.card-actions { position: absolute; right: 8px; top: 10px; display: flex; flex-direction: column; gap: 3px; }\n.card-actions .icon-button { width: 26px; height: 26px; }\n.card-actions svg { width: 14px; height: 14px; }\n.card-actions .edit { opacity: 0; }\n.card:hover .edit, .card:focus-within .edit { opacity: 1; }\n@media (hover: none) { .card-actions .edit { opacity: 1; } }\n.copy-indicator { pointer-events: none; }\n.card.copied { border-color: #8dbfae; background: #f5fbf8; }\n.card.copied .copy-indicator { color: #539b7e; }\n.empty { padding: 52px 7px 28px; text-align: center; }\n.empty-art { width: 70px; height: 70px; background: #edf5fe; border: 1px solid #dceafa; border-radius: 23px; color: #8bb4d9; display: grid; place-items: center; margin: 0 auto 22px; transform: rotate(-5deg); }\n.empty-art svg { width: 30px; height: 30px; }\n.empty h2 { margin: 0 0 8px; color: #59738c; font-size: 14px; font-weight: 550; }\n.empty p { color: #95a5b5; font-size: 12px; line-height: 1.9; margin: 0 0 20px; }\n.footer { padding: 13px 24px; border-top: 1px solid #e6edf5; display: flex; align-items: center; justify-content: space-between; color: #9cabb9; font-size: 10px; background: #f3f8fe; }\n.privacy { display: inline-flex; align-items: center; gap: 5px; }\n.privacy svg { width: 12px; height: 12px; }\n.status { flex-shrink: 0; min-height: 0; margin: 0 24px; border-radius: 8px; font-size: 12px; color: #427c64; background: #eaf5ef; }\n.status:not(:empty) { padding: 8px 10px; margin-bottom: 12px; }\n.status[data-error=\"true\"] { color: #a05252; background: #fff0ed; }\n.editor { flex: 1; min-height: 0; overflow-y: auto; padding: 0 24px 20px; }\n.editor-heading { display: flex; align-items: center; gap: 6px; margin: 0 0 16px; font-size: 14px; font-weight: 600; }\n.editor label { display: block; margin-bottom: 16px; font-size: 12px; color: #6c8299; }\n.editor input, .editor textarea { margin-top: 7px; display: block; width: 100%; border: 1px solid #d9e5f1; border-radius: 9px; padding: 11px 12px; background: #fff; font-size: 13px; }\n.editor textarea { resize: vertical; min-height: 130px; height: 175px; line-height: 1.8; }\n.editor input::placeholder, .editor textarea::placeholder { color: #a8b5c3; }\n.editor-hint { font-size: 10px; color: #96a6b6; margin: -6px 0 16px; }\n.editor-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; }\n.secondary { background: #e9f1f9; border: 1px solid #dae5f0; color: #6c859d; border-radius: 9px; padding: 9px 14px; font-size: 12px; }\n.secondary:hover { background: #deeaf7; }\n.danger { color: #b47c7c; background: transparent; padding: 9px 0; font-size: 12px; }\n.danger:hover { color: #aa4646; }\n.delete-confirm { padding: 14px; border: 1px solid #eddad7; background: #fff8f6; border-radius: 10px; margin-top: 18px; font-size: 12px; color: #9a6760; }\n.delete-confirm p { margin: 0 0 12px; }\n.delete-confirm .editor-actions { justify-content: flex-end; }\n.delete-confirm .danger { padding: 8px; }\n@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; } }\n";
+const DRAWER_STYLES = ":host {\n  all: initial;\n  color-scheme: light;\n  font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;\n  font-size: 14px;\n  color: #273d52;\n  line-height: 1.5;\n  -webkit-font-smoothing: antialiased;\n}\n*, *::before, *::after { box-sizing: border-box; }\nbutton, input, textarea, a { font: inherit; color: inherit; }\nbutton { cursor: pointer; }\nbutton, input, textarea { -webkit-tap-highlight-color: transparent; }\nbutton:focus-visible, input:focus-visible, textarea:focus-visible, a:focus-visible { outline: 3px solid #83b7e8; outline-offset: 3px; }\nbutton { border: 0; }\nsvg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }\n[hidden] { display: none !important; }\n.handle {\n  pointer-events: auto;\n  position: absolute; left: 0; width: 32px; height: 64px; padding: 0;\n  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;\n  border: 1px solid #c8def2; border-right: 0; border-radius: 14px 0 0 14px;\n  background: #eaf4ff; color: #5185b3; box-shadow: -3px 3px 14px #365a8012;\n  touch-action: none; user-select: none; cursor: grab;\n  transition: background .18s, color .18s;\n}\n.handle:hover { background: #dceeff; color: #2469a4; }\n.handle:active { cursor: grabbing; }\n.grip { width: 10px; height: 7px; background-image: radial-gradient(circle, #89aaca 1px, transparent 1px); background-size: 5px 4px; }\n.panel {\n  pointer-events: auto;\n  margin-left: 32px; width: calc(100% - 32px); height: 100%;\n  background: #f8fbff; border: 1px solid #dce8f3; border-right: 0;\n  border-radius: 22px 0 0 22px; box-shadow: -12px 8px 48px #294f741a;\n  display: flex; flex-direction: column; overflow: hidden;\n}\n:host([data-open=\"false\"]) .panel { box-shadow: none; }\n.header { padding: 26px 24px 18px; background: linear-gradient(145deg, #eef6ff, #f8fbff 85%); }\n.topline { display: flex; align-items: center; gap: 10px; }\n.brand-icon { width: 36px; height: 36px; border: 1px solid #ccdef1; background: #e1efff; border-radius: 11px; display: grid; place-items: center; color: #4c82b3; }\n.brand-icon svg { width: 20px; height: 20px; }\nh1 { font-size: 19px; font-weight: 650; letter-spacing: 1px; margin: 0; }\n.brand-caption { color: #8b9db0; font-size: 10px; letter-spacing: 2px; line-height: 1.2; margin-top: 2px; }\n.spacer { flex: 1; }\n.icon-button { width: 30px; height: 30px; border-radius: 8px; background: transparent; color: #8198ae; display: inline-flex; align-items: center; justify-content: center; }\n.icon-button:hover { color: #3c78af; background: #e5f0fc; }\n.tagline { margin: 18px 0 0; font-size: 12px; color: #8395a8; letter-spacing: .3px; }\n.view-switch { display: flex; gap: 5px; margin: 0 24px 16px; padding: 4px; background: #eaf2fb; border-radius: 11px; flex-shrink: 0; }\n.view-button { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 4px; font-size: 12px; border-radius: 8px; background: transparent; color: #768da4; }\n.view-button svg { width: 15px; height: 15px; }\n.view-button[aria-pressed=\"true\"] { color: #3979b3; background: white; box-shadow: 0 2px 5px #467bad12; }\n.toolbar { padding: 0 24px 18px; display: flex; gap: 9px; }\n.search { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; padding: 0 11px; height: 39px; background: white; border: 1px solid #e0e9f3; border-radius: 10px; color: #9aafc2; }\n.search:focus-within { border-color: #94bee5; box-shadow: 0 0 0 3px #d9eafd77; }\n.search svg { width: 16px; height: 16px; }\n.search input { background: transparent; border: 0; outline: none; width: 100%; min-width: 0; font-size: 12px; }\n.search input::placeholder { color: #9aaabb; }\n.primary { background: #5f96c9; color: white; border: 1px solid #548cc0; border-radius: 10px; padding: 9px 14px; font-size: 12px; font-weight: 550; display: inline-flex; justify-content: center; align-items: center; gap: 5px; box-shadow: 0 2px 3px #467bad14; }\n.primary:hover { background: #4b84b8; }\n.primary:disabled { cursor: wait; opacity: .6; }\n.primary svg { width: 15px; height: 15px; }\n.list-view, .sites-view { flex: 1; min-height: 0; display: flex; flex-direction: column; }\n.list-heading { display: flex; justify-content: space-between; padding: 0 25px 10px; color: #8b9caf; font-size: 10px; letter-spacing: 1px; }\n.list-heading span:last-child { letter-spacing: 0; }\n.list, .site-list { flex: 1; min-height: 0; overflow-y: auto; padding: 2px 17px 18px 24px; scrollbar-width: thin; scrollbar-color: #caddec transparent; overscroll-behavior: contain; }\n.sites-hint { color: #8b9caf; font-size: 11px; margin: 0 24px 12px; }\n.site-link { display: block; text-decoration: none; border-radius: 12px; padding: 14px 36px 14px 16px; }\n.site-address { display: block; color: #859ab0; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 6px; }\n.site-meta { display: block; color: #96a6b6; font-size: 10px; margin-top: 8px; }\n.forget-site { position: absolute; top: 8px; right: 5px; width: 26px; height: 26px; }\n.forget-site svg { width: 13px; height: 13px; }\n.clear-sites { padding: 0; background: transparent; color: #8198ae; font-size: 10px; }\n.clear-sites:disabled { opacity: .5; cursor: default; }\n.clear-sites-confirm { margin: 0 24px 12px; padding: 12px; border: 1px solid #eddad7; border-radius: 10px; background: #fff8f6; color: #9a6760; font-size: 12px; }\n.clear-sites-confirm p { margin: 0 0 8px; }\n.clear-sites-confirm .danger { margin-left: 16px; }\n.card { position: relative; margin-bottom: 10px; border: 1px solid #e1eaf4; border-radius: 12px; background: #fff; transition: border-color .16s, box-shadow .16s, transform .16s; }\n.card:hover, .card:focus-within { border-color: #9ec4e6; box-shadow: 0 4px 13px #457eb40c; transform: translateY(-1px); }\n.copy-card { background: transparent; display: block; width: 100%; text-align: left; border-radius: 12px; padding: 17px 41px 16px 16px; }\n.card-title { display: block; font-size: 13px; font-weight: 600; color: #3c5269; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n.card-body { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; color: #8696a7; line-height: 1.85; margin-top: 7px; }\n.card:hover .card-title { color: #3979b3; }\n.card-actions { position: absolute; right: 8px; top: 10px; display: flex; flex-direction: column; gap: 3px; }\n.card-actions .icon-button { width: 26px; height: 26px; }\n.card-actions svg { width: 14px; height: 14px; }\n.card-actions .edit { opacity: 0; }\n.card:hover .edit, .card:focus-within .edit { opacity: 1; }\n@media (hover: none) { .card-actions .edit { opacity: 1; } }\n.copy-indicator { pointer-events: none; }\n.card.copied { border-color: #8dbfae; background: #f5fbf8; }\n.card.copied .copy-indicator { color: #539b7e; }\n.empty { padding: 52px 7px 28px; text-align: center; }\n.empty-art { width: 70px; height: 70px; background: #edf5fe; border: 1px solid #dceafa; border-radius: 23px; color: #8bb4d9; display: grid; place-items: center; margin: 0 auto 22px; transform: rotate(-5deg); }\n.empty-art svg { width: 30px; height: 30px; }\n.empty h2 { margin: 0 0 8px; color: #59738c; font-size: 14px; font-weight: 550; }\n.empty p { color: #95a5b5; font-size: 12px; line-height: 1.9; margin: 0 0 20px; }\n.footer { padding: 13px 24px; border-top: 1px solid #e6edf5; display: flex; align-items: center; justify-content: space-between; color: #9cabb9; font-size: 10px; background: #f3f8fe; }\n.privacy { display: inline-flex; align-items: center; gap: 5px; }\n.privacy svg { width: 12px; height: 12px; }\n.status { flex-shrink: 0; min-height: 0; margin: 0 24px; border-radius: 8px; font-size: 12px; color: #427c64; background: #eaf5ef; }\n.status:not(:empty) { padding: 8px 10px; margin-bottom: 12px; }\n.status[data-error=\"true\"] { color: #a05252; background: #fff0ed; }\n.editor { flex: 1; min-height: 0; overflow-y: auto; padding: 0 24px 20px; }\n.editor-heading { display: flex; align-items: center; gap: 6px; margin: 0 0 16px; font-size: 14px; font-weight: 600; }\n.editor label { display: block; margin-bottom: 16px; font-size: 12px; color: #6c8299; }\n.editor input, .editor textarea { margin-top: 7px; display: block; width: 100%; border: 1px solid #d9e5f1; border-radius: 9px; padding: 11px 12px; background: #fff; font-size: 13px; }\n.editor textarea { resize: vertical; min-height: 130px; height: 175px; line-height: 1.8; }\n.editor input::placeholder, .editor textarea::placeholder { color: #a8b5c3; }\n.editor-hint { font-size: 10px; color: #96a6b6; margin: -6px 0 16px; }\n.editor-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; }\n.secondary { background: #e9f1f9; border: 1px solid #dae5f0; color: #6c859d; border-radius: 9px; padding: 9px 14px; font-size: 12px; }\n.secondary:hover { background: #deeaf7; }\n.danger { color: #b47c7c; background: transparent; padding: 9px 0; font-size: 12px; }\n.danger:hover { color: #aa4646; }\n.delete-confirm { padding: 14px; border: 1px solid #eddad7; background: #fff8f6; border-radius: 10px; margin-top: 18px; font-size: 12px; color: #9a6760; }\n.delete-confirm p { margin: 0 0 12px; }\n.delete-confirm .editor-actions { justify-content: flex-end; }\n.delete-confirm .danger { padding: 8px; }\n@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; } }\n";
 /* DRAWER_STYLES is embedded by scripts/build.mjs. No network or page styles needed. */
 if (!document.getElementById('chrome-note-drawer')) {
   const PREFIX = 'snippet:';
   const POSITION = 'drawer.position';
+  const VIEW = 'drawer.view';
   const AUTO_CLOSE_DELAY = 100;
   const host = document.createElement('div');
   host.id = 'chrome-note-drawer';
@@ -32,12 +33,14 @@ if (!document.getElementById('chrome-note-drawer')) {
     lock: '<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/>',
     check: '<path d="m5 12 4 4L19 6"/>',
     back: '<path d="m14 6-6 6 6 6"/>',
+    globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c5 5 5 13 0 18-5-5-5-13 0-18"/>',
+    close: '<path d="m7 7 10 10M7 17 17 7"/>',
   };
   const icon = (name) => `<svg viewBox="0 0 24 24" aria-hidden="true">${icons[name]}</svg>`;
   root.innerHTML = `
     <style>${DRAWER_STYLES}</style>
-    <button class="handle" type="button" aria-label="展开文本抽屉；上下拖动调整位置" aria-expanded="false" aria-controls="drawer-panel" title="悬停展开 · 上下拖动">${icon('arrow')}<span class="grip"></span></button>
-    <section class="panel" id="drawer-panel" aria-label="随手记文本抽屉" aria-hidden="true" inert>
+    <button class="handle" type="button" aria-label="展开随手记抽屉；上下拖动调整位置" aria-expanded="false" aria-controls="drawer-panel" title="悬停展开 · 上下拖动">${icon('arrow')}<span class="grip"></span></button>
+    <section class="panel" id="drawer-panel" aria-label="随手记抽屉" aria-hidden="true" inert>
       <header class="header">
         <div class="topline">
           <span class="brand-icon">${icon('note')}</span>
@@ -45,8 +48,12 @@ if (!document.getElementById('chrome-note-drawer')) {
           <span class="spacer"></span>
           <button class="icon-button collapse" type="button" aria-label="收起抽屉" title="收起抽屉 · Esc">${icon('arrow')}</button>
         </div>
-        <p class="tagline">把常用的话，放在手边。</p>
+        <p class="tagline">常用的话，常去的地方，都在手边。</p>
       </header>
+      <nav class="view-switch" aria-label="抽屉内容">
+        <button class="view-button" type="button" data-view="notes" aria-pressed="true">${icon('note')} 我的文本</button>
+        <button class="view-button" type="button" data-view="sites" aria-pressed="false">${icon('globe')} 常用网页</button>
+      </nav>
       <div class="list-view">
         <div class="toolbar">
           <label class="search">${icon('search')}<input type="search" aria-label="搜索文本" placeholder="搜索标题或内容" maxlength="200" autocomplete="off"></label>
@@ -54,6 +61,13 @@ if (!document.getElementById('chrome-note-drawer')) {
         </div>
         <div class="list-heading"><span>我的文本 <span class="count">00</span></span><span>点击卡片即可复制</span></div>
         <div class="list" aria-label="已保存的文本"></div>
+      </div>
+      <div class="sites-view" hidden>
+        <div class="toolbar"><label class="search site-search">${icon('search')}<input type="search" aria-label="搜索网页" placeholder="搜索网页标题或网址" maxlength="200" autocomplete="off"></label></div>
+        <div class="list-heading"><span>近期常用 <span class="site-count">00</span></span><button class="clear-sites" type="button">清空记录</button></div>
+        <p class="sites-hint">越常访问越靠前，久未访问会慢慢降温。</p>
+        <div class="clear-sites-confirm" hidden><p>清空所有网页访问记录？之后的访问会重新记录。</p><button class="secondary keep-sites" type="button">保留</button><button class="danger confirm-clear-sites" type="button">确定清空</button></div>
+        <div class="site-list" aria-label="按近期热度排序的网页"></div>
       </div>
       <form class="editor" hidden>
         <h2 class="editor-heading"><button class="icon-button cancel" type="button" aria-label="返回文本列表">${icon('back')}</button><span class="editor-title">新建文本</span></h2>
@@ -83,6 +97,10 @@ if (!document.getElementById('chrome-note-drawer')) {
   const titleInput = form.elements.title;
   const textInput = form.elements.text;
   let snippets = [];
+  let sites = [];
+  let activeView = 'notes';
+  let sitesLoaded = false;
+  let sitesRequest = 0;
   let anchor = 0.48;
   let opened = false;
   let closeTimer;
@@ -105,6 +123,7 @@ if (!document.getElementById('chrome-note-drawer')) {
   }
 
   function setOpen(value, keyboard = false) {
+    const wasOpened = opened;
     clearTimeout(closeTimer);
     opened = value;
     host.dataset.open = String(value);
@@ -112,7 +131,8 @@ if (!document.getElementById('chrome-note-drawer')) {
     handle.setAttribute('aria-expanded', String(value));
     panel.setAttribute('aria-hidden', String(!value));
     panel.inert = !value;
-    if (value && keyboard) (form.hidden ? $('.search input') : titleInput).focus({ preventScroll: true });
+    if (value && !wasOpened && activeView === 'sites') loadSites();
+    if (value && keyboard) (form.hidden ? $(activeView === 'sites' ? '.site-search input' : '.search input') : titleInput).focus({ preventScroll: true });
     if (!value && panel.contains(root.activeElement)) handle.focus({ preventScroll: true });
   }
 
@@ -151,11 +171,100 @@ if (!document.getElementById('chrome-note-drawer')) {
         anchor = Math.max(0.04, Math.min(0.96, all[POSITION]));
         layout();
       }
+      if (!loaded && all[VIEW] === 'sites') switchView('sites', false);
       loaded = true;
       renderList();
     } catch {
       status('无法读取本地文本，请刷新网页后重试。', true);
     }
+  }
+
+  function switchView(view, persist = true) {
+    activeView = view;
+    $('.list-view').hidden = view !== 'notes';
+    $('.sites-view').hidden = view !== 'sites';
+    root.querySelectorAll('.view-button').forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.view === view)));
+    $('.status').textContent = '';
+    if (view === 'sites') loadSites();
+    if (persist) chrome.storage.local.set({ [VIEW]: view }).catch(() => status('未能记住当前页签。', true));
+  }
+
+  async function loadSites() {
+    const request = ++sitesRequest;
+    if (!sitesLoaded) $('.site-list').textContent = '正在读取网页记录…';
+    try {
+      const response = await chrome.runtime.sendMessage({ type: 'chrome-note:sites' });
+      if (!response?.ok) throw new Error('Cannot read visits');
+      if (request !== sitesRequest) return;
+      sites = response.sites;
+      sitesLoaded = true;
+      renderSites();
+    } catch {
+      if (request !== sitesRequest) return;
+      if (!sitesLoaded) $('.site-list').textContent = '网页记录暂时无法读取。';
+      status('无法读取网页记录，请重新加载扩展并刷新网页。', true);
+    }
+  }
+
+  function renderSites() {
+    const query = $('.site-search input').value.trim().toLocaleLowerCase();
+    const visible = sites.filter((site) => `${site.title}\n${site.url}`.toLocaleLowerCase().includes(query));
+    $('.site-count').textContent = String(sites.length).padStart(2, '0');
+    $('.clear-sites').disabled = !sites.length;
+    const list = $('.site-list');
+    const focused = root.activeElement;
+    const focusedUrl = focused?.closest('.site-card')?.dataset.url;
+    const focusedRemove = focused?.classList.contains('forget-site');
+    list.replaceChildren();
+    if (!visible.length) {
+      const empty = document.createElement('div');
+      empty.className = 'empty';
+      empty.innerHTML = `<div class="empty-art">${icon(query ? 'search' : 'globe')}</div><h2>${query ? '没有找到这个网页' : '常去的地方，会出现在这里'}</h2><p>${query ? '试试网页标题或网址中的关键词。' : '从现在起自动记录普通网页的访问。<br>多逛几次，常用网页就会排到前面。'}</p>`;
+      list.append(empty);
+      return;
+    }
+    for (const site of visible) {
+      const card = document.createElement('article');
+      card.className = 'card site-card';
+      card.dataset.url = site.url;
+      const link = document.createElement('a');
+      link.className = 'site-link';
+      link.href = site.url;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.title = `${site.title}\n${site.url}\n在新标签页打开`;
+      const title = document.createElement('span');
+      title.className = 'card-title';
+      title.textContent = site.title;
+      const address = document.createElement('span');
+      address.className = 'site-address';
+      address.textContent = site.url.replace(/^https?:\/\//, '');
+      const meta = document.createElement('span');
+      meta.className = 'site-meta';
+      const days = Math.max(0, Math.floor((Date.now() - site.lastVisited) / 86400000));
+      meta.textContent = `访问 ${site.count} 次 · ${days === 0 ? '最近 24 小时内' : `${days} 天前`}访问`;
+      link.append(title, address, meta);
+      const remove = document.createElement('button');
+      remove.className = 'icon-button forget-site';
+      remove.type = 'button';
+      remove.title = '移除此记录；下次访问会重新记录';
+      remove.setAttribute('aria-label', `移除网页记录：${site.title}`);
+      remove.innerHTML = icon('close');
+      remove.addEventListener('click', () => changeSites('chrome-note:forget-site', site.url));
+      card.append(link, remove);
+      list.append(card);
+      if (focusedUrl === site.url) (focusedRemove ? remove : link).focus({ preventScroll: true });
+    }
+  }
+
+  async function changeSites(type, url) {
+    try {
+      const response = await chrome.runtime.sendMessage({ type, url });
+      if (!response?.ok) throw new Error('Cannot update visits');
+      $('.clear-sites-confirm').hidden = true;
+      await loadSites();
+      status(type === 'chrome-note:clear-sites' ? '已清空网页记录' : '已移除，下次访问会重新记录');
+    } catch { status('操作失败，请刷新网页后重试。', true); }
   }
 
   function renderList() {
@@ -264,6 +373,7 @@ if (!document.getElementById('chrome-note-drawer')) {
     $('.delete').hidden = !snippet;
     $('.delete-confirm').hidden = true;
     $('.list-view').hidden = true;
+    $('.view-switch').hidden = true;
     form.hidden = false;
     $('.close-hint').textContent = '编辑中，保持展开';
     $('.status').textContent = '';
@@ -273,6 +383,7 @@ if (!document.getElementById('chrome-note-drawer')) {
   function showList() {
     form.hidden = true;
     $('.list-view').hidden = false;
+    $('.view-switch').hidden = false;
     editingId = null;
     $('.delete-confirm').hidden = true;
     $('.close-hint').textContent = '移开 100ms，自动收起';
@@ -370,6 +481,11 @@ if (!document.getElementById('chrome-note-drawer')) {
     }
   });
   $('.add').addEventListener('click', () => edit());
+  root.querySelectorAll('.view-button').forEach((button) => button.addEventListener('click', () => switchView(button.dataset.view)));
+  $('.site-search input').addEventListener('input', renderSites);
+  $('.clear-sites').addEventListener('click', () => { $('.clear-sites-confirm').hidden = false; $('.keep-sites').focus(); });
+  $('.keep-sites').addEventListener('click', () => { $('.clear-sites-confirm').hidden = true; $('.clear-sites').focus(); });
+  $('.confirm-clear-sites').addEventListener('click', () => changeSites('chrome-note:clear-sites'));
   $('.search input').addEventListener('input', renderList);
   root.querySelectorAll('.cancel').forEach((button) => button.addEventListener('click', showList));
   form.addEventListener('submit', save);
@@ -388,6 +504,7 @@ if (!document.getElementById('chrome-note-drawer')) {
   });
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area === 'local' && Object.keys(changes).some((key) => key.startsWith(PREFIX) || key === POSITION)) load();
+    if (area === 'local' && changes['visits.entries'] && activeView === 'sites') loadSites();
   });
   chrome.runtime.onMessage.addListener((message) => {
     if (message.type === 'chrome-note:open') setOpen(true, true);
@@ -395,6 +512,7 @@ if (!document.getElementById('chrome-note-drawer')) {
   window.addEventListener('resize', layout);
   layout();
   document.documentElement.append(host);
+  chrome.runtime.sendMessage({ type: 'chrome-note:visit', title: document.title }).catch(() => {});
   load();
 }
 

@@ -1,15 +1,15 @@
 {
   "manifest_version": 3,
   "name": "随手记 · 文本抽屉",
-  "version": "1.0.1",
-  "description": "把常用的话放在手边。右侧悬停展开、点击复制、拖动定位，文本仅保存在本地。",
-  "permissions": ["storage", "clipboardWrite"],
+  "version": "1.1.0",
+  "description": "常用文本随手复制，常用网页按近期访问热度排序、快速打开。数据仅保存在本地。",
+  "permissions": ["storage", "clipboardWrite", "tabs"],
   "icons": {"16": "icons/16.png", "48": "icons/48.png", "128": "icons/128.png"},
   "action": {
     "default_title": "展开随手记",
     "default_icon": {"16": "icons/16.png", "48": "icons/48.png", "128": "icons/128.png"}
   },
-  "background": {"service_worker": "background.js"},
+  "background": {"service_worker": "background.js", "type": "module"},
   "content_scripts": [{
     "matches": ["http://*/*", "https://*/*"],
     "js": ["content.js"],
