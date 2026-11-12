@@ -11,35 +11,36 @@ function withVisits(task) {
   return result;
 }
 
-function trackTab(tab, metadataOnly = false) {
+function updateTabTitle(tab) {
   if (!tab || tab.incognito || !normalizeUrl(tab.url)) return;
   const now = Date.now();
   withVisits(async (sites) => {
-    const updated = recordVisit(sites, tab.url, tab.title, now, metadataOnly);
+    const updated = recordVisit(sites, tab.url, tab.title, now, true);
     if (updated !== sites) await chrome.storage.local.set({ [VISITS_KEY]: updated });
   }).catch((error) => console.warn('随手记：无法保存网页访问记录', error));
 }
 
 chrome.tabs.onUpdated.addListener((tabId, change, tab) => {
-  if (change.status === 'complete' || (change.url && tab.status === 'complete')) trackTab(tab);
-  else if (change.title) trackTab(tab, true);
+  // Navigation, refreshes and content-script injection never add visits.
+  if (change.title || change.status === 'complete') updateTabTitle(tab);
 });
-chrome.tabs.onActivated.addListener(async ({ tabId }) => {
-  try {
-    const tab = await chrome.tabs.get(tabId);
-    if (tab.status === 'complete') trackTab(tab);
-  } catch { /* A tab can close before its activation event is handled. */ }
+chrome.tabs.onActivated.addListener(({ tabId }) => {
+  const now = Date.now();
+  // Every activation is one visit, including rapid switches and loading tabs.
+  // Queue the lookup as well as the write to retain activation order.
+  withVisits(async (sites) => {
+    let tab;
+    try {
+      tab = await chrome.tabs.get(tabId);
+    } catch { return; /* The activated tab may already have closed. */ }
+    if (tab.incognito || !normalizeUrl(tab.url)) return;
+    const updated = recordVisit(sites, tab.url, tab.title, now);
+    await chrome.storage.local.set({ [VISITS_KEY]: updated });
+  }).catch((error) => console.warn('随手记：无法保存标签切换记录', error));
 });
 
 chrome.runtime.onMessage.addListener((message, sender, respond) => {
   if (sender.id !== chrome.runtime.id || !sender.tab || sender.frameId !== 0) return;
-  // The first page can finish before a newly installed worker registers tab
-  // listeners. A content-script handshake covers that race; storage deduplicates it.
-  if (message?.type === 'chrome-note:visit') {
-    trackTab({ ...sender.tab, title: message.title });
-    respond({ ok: true });
-    return;
-  }
   if (!['chrome-note:sites', 'chrome-note:forget-site', 'chrome-note:clear-sites'].includes(message?.type)) return;
   if (sender.tab.incognito) { respond({ ok: true, sites: [] }); return; }
   withVisits(async (sites) => {

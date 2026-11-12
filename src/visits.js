@@ -1,6 +1,5 @@
 export const VISITS_KEY = 'visits.entries';
 export const HALF_LIFE = 7 * 24 * 60 * 60 * 1000;
-export const REVISIT_DELAY = 30 * 1000;
 export const MAX_SITES = 1000;
 
 export function normalizeUrl(raw) {
@@ -38,10 +37,8 @@ export function recordVisit(sites, rawUrl, title, now = Date.now(), metadataOnly
   if (metadataOnly && !previous) return sites;
   const label = (typeof title === 'string' ? title.trim().slice(0, 200) : '')
     || previous?.title || new URL(url).hostname;
-  // Persisted deduplication survives service-worker suspension and tab races.
-  const duplicate = previous && (metadataOnly || now - previous.lastVisited < REVISIT_DELAY);
-  if (duplicate && previous.title === label) return sites;
-  const next = duplicate ? { ...previous, title: label } : {
+  if (metadataOnly && previous.title === label) return sites;
+  const next = metadataOnly ? { ...previous, title: label } : {
     url, title: label, count: (previous?.count || 0) + 1,
     score: (previous ? heat(previous, now) : 0) + 1, lastVisited: now,
   };

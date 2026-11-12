@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { HALF_LIFE, REVISIT_DELAY, MAX_SITES, normalizeUrl, validVisits, heat, rankVisits, recordVisit } from '../src/visits.js';
+import { HALF_LIFE, MAX_SITES, normalizeUrl, validVisits, heat, rankVisits, recordVisit } from '../src/visits.js';
 
 const now = 1800000000000;
 const site = (url, score, lastVisited = now, count = score) => ({ url, title: url, score, lastVisited, count });
@@ -22,18 +22,19 @@ test('recent use overtakes an old favorite and new visits add to decayed heat', 
   assert.equal(record.count, 101);
   assert.equal(record.score, 1 + 100 / 128);
   assert.equal(rankVisits(updated, now)[0].url, recent.url);
-  const again = recordVisit(updated, old.url, 'Old favorite', now + REVISIT_DELAY);
-  assert.equal(rankVisits(again, now + REVISIT_DELAY)[0].url, old.url);
+  const again = recordVisit(updated, old.url, 'Old favorite', now + 1000);
+  assert.equal(rankVisits(again, now + 1000)[0].url, old.url);
 });
 
-test('repeated events are deduplicated across serialized/reloaded storage', () => {
+test('every tab activation counts even within the same millisecond or after reloading storage', () => {
   let records = recordVisit([], 'https://example.test/path', 'First', now);
-  records = recordVisit(JSON.parse(JSON.stringify(records)), records[0].url, 'Final title', now + 2000);
-  assert.equal(records[0].count, 1);
+  records = recordVisit(JSON.parse(JSON.stringify(records)), records[0].url, 'Final title', now);
+  assert.equal(records[0].count, 2);
+  assert.equal(records[0].score, 2);
   assert.equal(records[0].lastVisited, now);
   assert.equal(records[0].title, 'Final title');
-  records = recordVisit(records, records[0].url, '', now + REVISIT_DELAY);
-  assert.equal(records[0].count, 2);
+  records = recordVisit(records, records[0].url, '', now + 1000);
+  assert.equal(records[0].count, 3);
   assert.equal(records[0].title, 'Final title');
 });
 

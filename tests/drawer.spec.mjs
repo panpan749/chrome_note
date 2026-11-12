@@ -17,7 +17,7 @@ const fixture = `<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>
 test.beforeAll(async () => {
   server = createServer((request, response) => {
     response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-    response.end(fixture);
+    response.end(fixture + (request.url === '/loading' ? '<img src="/pending.png">' : ''));
   });
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   origin = `http://127.0.0.1:${server.address().port}`;
@@ -85,29 +85,73 @@ async function openSites() {
   await expect(ui('.sites-view')).toBeVisible();
 }
 
-test('records real navigation, deduplicates refresh, tracks SPA routes and concurrent tabs', async () => {
+async function backgroundTab(url) {
+  const created = context.waitForEvent('page');
+  await (await worker()).evaluate((url) => chrome.tabs.create({ url, active: false }), url);
+  const tab = await created;
+  await tab.waitForURL(url);
+  await tab.waitForLoadState('domcontentloaded');
+  return tab;
+}
+
+test('counts each tab switch, including rapid returns, but never reloads or in-page navigation', async () => {
+  await (await worker()).evaluate(() => chrome.storage.local.remove('visits.entries'));
+  const other = await backgroundTab(origin + '/other');
+  await other.waitForLoadState();
+  await page.waitForTimeout(150);
+  expect(await visits()).toEqual([]);
+  await other.bringToFront();
+  await expect.poll(async () => (await visits()).find((site) => site.url === origin + '/other')?.count).toBe(1);
+  await page.bringToFront();
   await expect.poll(async () => (await visits()).find((site) => site.url === origin + '/')?.count).toBe(1);
+  for (let i = 0; i < 3; i++) {
+    await other.bringToFront();
+    await page.bringToFront();
+  }
+  await expect.poll(async () => (await visits()).map((site) => site.count)).toEqual([4, 4]);
+  await page.bringToFront(); // Selecting the already active tab isn't a switch.
   await page.reload();
   await expect(ui('.handle')).toBeVisible();
-  expect((await visits()).find((site) => site.url === origin + '/').count).toBe(1);
+  await page.evaluate(() => { document.title = '更新后的标题'; });
+  await expect.poll(async () => (await visits()).find((site) => site.url === origin + '/')?.title).toBe('更新后的标题');
+  expect((await visits()).map((site) => site.count)).toEqual([4, 4]);
   await page.evaluate(() => { history.pushState({}, '', '/inbox?q=one'); document.title = '收件箱'; });
-  await expect.poll(async () => (await visits()).find((site) => site.url.endsWith('/inbox?q=one'))?.title).toBe('收件箱');
-  await page.evaluate(() => { location.hash = 'section'; });
-  await expect.poll(async () => (await visits()).length).toBe(2);
   await page.evaluate(() => { location.hash = '/settings'; });
-  await expect.poll(async () => (await visits()).some((site) => site.url.endsWith('#/settings'))).toBe(true);
-  const tabs = await Promise.all(Array.from({ length: 4 }, () => context.newPage()));
-  await Promise.all(tabs.map((tab, i) => tab.goto(`${origin}/parallel-${i}`)));
-  await expect.poll(async () => (await visits()).filter((site) => site.url.includes('/parallel-')).length).toBe(4);
-  expect((await visits()).every((site) => site.count === 1)).toBe(true);
-  // Age the persisted timestamp to exercise an actual revisit without a 30s sleep.
-  await (await worker()).evaluate(async (url) => {
-    const data = await chrome.storage.local.get('visits.entries');
-    data['visits.entries'].find((site) => site.url === url).lastVisited -= 31000;
-    await chrome.storage.local.set(data);
-  }, origin + '/parallel-0');
-  await tabs[0].bringToFront();
-  await expect.poll(async () => (await visits()).find((site) => site.url === origin + '/parallel-0')?.count).toBe(2);
+  await page.waitForTimeout(150);
+  expect((await visits()).map((site) => site.count)).toEqual([4, 4]);
+  expect((await visits()).some((site) => site.url.includes('/inbox'))).toBe(false);
+  await other.bringToFront();
+  await page.bringToFront();
+  await expect.poll(async () => (await visits()).find((site) => site.url.endsWith('/inbox?q=one#/settings'))?.count).toBe(1);
+  await expect.poll(async () => (await visits()).find((site) => site.url === origin + '/other')?.count).toBe(5);
+  await page.goto(origin + '/another');
+  await expect(ui('.handle')).toBeVisible();
+  await page.waitForTimeout(150);
+  expect((await visits()).some((site) => site.url.endsWith('/another'))).toBe(false);
+});
+
+test('activating a loading tab counts once and finishing its load does not count again', async () => {
+  let releaseImage;
+  const pendingImage = new Promise((resolve) => { releaseImage = resolve; });
+  await context.route('**/pending.png', async (route) => {
+    await pendingImage;
+    await route.fulfill({ status: 204 });
+  });
+  try {
+    const loading = await backgroundTab(origin + '/loading');
+    await expect.poll(() => worker().then((w) => w.evaluate(async (url) => {
+      const tabs = await chrome.tabs.query({});
+      return tabs.find((tab) => tab.url === url)?.status;
+    }, origin + '/loading'))).toBe('loading');
+    expect((await visits()).some((site) => site.url.endsWith('/loading'))).toBe(false);
+    await loading.bringToFront();
+    await expect.poll(async () => (await visits()).find((site) => site.url.endsWith('/loading'))?.count).toBe(1);
+    releaseImage();
+    await loading.waitForLoadState();
+    await expect(loading.locator('#chrome-note-drawer .handle')).toBeVisible();
+    await page.waitForTimeout(150);
+    expect((await visits()).find((site) => site.url.endsWith('/loading')).count).toBe(1);
+  } finally { releaseImage(); }
 });
 
 test('recent-frequency ranking, search, safe titles, quick opening and remembered view', async () => {
@@ -151,6 +195,8 @@ test('removing and clearing visits syncs tabs and preserves saved notes', async 
   await add('保留的文本', '不会因清空网页记录而丢失');
   const other = await context.newPage();
   await other.goto(origin + '/other');
+  await page.bringToFront();
+  await other.bringToFront();
   await expect.poll(async () => (await visits()).length).toBe(2);
   await other.locator('#chrome-note-drawer .handle').hover();
   await other.locator('#chrome-note-drawer [data-view="sites"]').click();

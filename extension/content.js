@@ -65,8 +65,8 @@ if (!document.getElementById('chrome-note-drawer')) {
       <div class="sites-view" hidden>
         <div class="toolbar"><label class="search site-search">${icon('search')}<input type="search" aria-label="搜索网页" placeholder="搜索网页标题或网址" maxlength="200" autocomplete="off"></label></div>
         <div class="list-heading"><span>近期常用 <span class="site-count">00</span></span><button class="clear-sites" type="button">清空记录</button></div>
-        <p class="sites-hint">越常访问越靠前，久未访问会慢慢降温。</p>
-        <div class="clear-sites-confirm" hidden><p>清空所有网页访问记录？之后的访问会重新记录。</p><button class="secondary keep-sites" type="button">保留</button><button class="danger confirm-clear-sites" type="button">确定清空</button></div>
+        <p class="sites-hint">每次切换到网页计一次，久未使用会慢慢降温。</p>
+        <div class="clear-sites-confirm" hidden><p>清空所有网页访问记录？之后切换到网页会重新记录。</p><button class="secondary keep-sites" type="button">保留</button><button class="danger confirm-clear-sites" type="button">确定清空</button></div>
         <div class="site-list" aria-label="按近期热度排序的网页"></div>
       </div>
       <form class="editor" hidden>
@@ -219,7 +219,7 @@ if (!document.getElementById('chrome-note-drawer')) {
     if (!visible.length) {
       const empty = document.createElement('div');
       empty.className = 'empty';
-      empty.innerHTML = `<div class="empty-art">${icon(query ? 'search' : 'globe')}</div><h2>${query ? '没有找到这个网页' : '常去的地方，会出现在这里'}</h2><p>${query ? '试试网页标题或网址中的关键词。' : '从现在起自动记录普通网页的访问。<br>多逛几次，常用网页就会排到前面。'}</p>`;
+      empty.innerHTML = `<div class="empty-art">${icon(query ? 'search' : 'globe')}</div><h2>${query ? '没有找到这个网页' : '常去的地方，会出现在这里'}</h2><p>${query ? '试试网页标题或网址中的关键词。' : '从其他标签切换到网页，就会记一次。<br>切换越频繁，常用网页越靠前。'}</p>`;
       list.append(empty);
       return;
     }
@@ -242,12 +242,12 @@ if (!document.getElementById('chrome-note-drawer')) {
       const meta = document.createElement('span');
       meta.className = 'site-meta';
       const days = Math.max(0, Math.floor((Date.now() - site.lastVisited) / 86400000));
-      meta.textContent = `访问 ${site.count} 次 · ${days === 0 ? '最近 24 小时内' : `${days} 天前`}访问`;
+      meta.textContent = `切入 ${site.count} 次 · ${days === 0 ? '最近 24 小时内' : `${days} 天前`}使用`;
       link.append(title, address, meta);
       const remove = document.createElement('button');
       remove.className = 'icon-button forget-site';
       remove.type = 'button';
-      remove.title = '移除此记录；下次访问会重新记录';
+      remove.title = '移除此记录；下次切入会重新记录';
       remove.setAttribute('aria-label', `移除网页记录：${site.title}`);
       remove.innerHTML = icon('close');
       remove.addEventListener('click', () => changeSites('chrome-note:forget-site', site.url));
@@ -263,7 +263,7 @@ if (!document.getElementById('chrome-note-drawer')) {
       if (!response?.ok) throw new Error('Cannot update visits');
       $('.clear-sites-confirm').hidden = true;
       await loadSites();
-      status(type === 'chrome-note:clear-sites' ? '已清空网页记录' : '已移除，下次访问会重新记录');
+      status(type === 'chrome-note:clear-sites' ? '已清空网页记录' : '已移除，下次切入会重新记录');
     } catch { status('操作失败，请刷新网页后重试。', true); }
   }
 
@@ -512,7 +512,6 @@ if (!document.getElementById('chrome-note-drawer')) {
   window.addEventListener('resize', layout);
   layout();
   document.documentElement.append(host);
-  chrome.runtime.sendMessage({ type: 'chrome-note:visit', title: document.title }).catch(() => {});
   load();
 }
 
